@@ -1,39 +1,35 @@
 import autogen
 from user_proxy_webagent import UserProxyWebAgent
 import asyncio
+from config_list import config_list
 
-config_list = [
-    {
-        "model": "gpt-3.5-turbo",
-    }
-]
 llm_config_assistant = {
-    "model":"gpt-3.5-turbo",
+    "model":"gpt-4",
     "temperature": 0,
     "config_list": config_list,
-        "functions": [
-        {
-            "name": "search_db",
-            "description": "Search database for order status",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "order_number": {
-                        "type": "integer",
-                        "description": "Order number",
-                    },
-                    "customer_number": {
-                        "type": "string",
-                        "description": "Customer number",
-                    }
-                },
-                "required": ["order_number","customer_number"],
-            },
-        },
-    ],
+#        "functions": [
+#        {
+#            "name": "search_db",
+#            "description": "Search database for order status",
+#            "parameters": {
+#                "type": "object",
+#                "properties": {
+#                    "order_number": {
+#                        "type": "integer",
+#                        "description": "Order number",
+#                    },
+#                    "customer_number": {
+#                        "type": "string",
+#                        "description": "Customer number",
+#                    }
+#                },
+#                "required": ["order_number","customer_number"],
+#            },
+#        },
+#    ],
 }
 llm_config_proxy = {
-    "model":"gpt-3.5-turbo-0613",
+    "model":"gpt-4",
     "temperature": 0,
     "config_list": config_list,
 }
@@ -41,13 +37,48 @@ llm_config_proxy = {
 
 #############################################################################################
 # this is where you put your Autogen logic, here I have a simple 2 agents with a function call
+class AutogenChat_x():
+    def __init__(self, chat_id=None, websocket=None):
+        self.websocket = websocket
+        self.chat_id = chat_id
+        self.client_sent_queue = asyncio.Queue()
+        self.client_receive_queue = asyncio.Queue()
+        self.assistant = autogen.AssistantAgent(
+            name="assistant",
+            llm_config=llm_config_assistant,
+        )
+        self.user_proxy = UserProxyWebAgent(
+            name="user_proxy",
+            human_input_mode="NEVER",
+            max_consecutive_auto_reply=10,
+            is_termination_msg=lambda x: x.get("content", "") and x.get("content", "").rstrip().endswith("TERMINATE"),
+            code_execution_config={
+                "work_dir": "coding",
+                "use_docker": False,     
+            },
+        )
+        # add the queues to communicate 
+        self.user_proxy.set_queues(self.client_sent_queue, self.client_receive_queue)
+
+    async def start(self, message):
+        print('>>>>>>>>>>>start')
+        await self.user_proxy.a_initiate_chat(
+            self.assistant,
+            clear_history=True,
+            message=message
+        )
+
+    #MOCH Function call 
+    def search_db(self, order_number=None, customer_number=None):
+        return "Order status: delivered TERMINATE"
+
+
 class AutogenChat():
     def __init__(self, chat_id=None, websocket=None):
         self.websocket = websocket
         self.chat_id = chat_id
         self.client_sent_queue = asyncio.Queue()
         self.client_receive_queue = asyncio.Queue()
-
         self.assistant = autogen.AssistantAgent(
             name="assistant",
             llm_config=llm_config_assistant,
@@ -66,11 +97,11 @@ class AutogenChat():
                 "search_db": self.search_db
             }
         )
-
         # add the queues to communicate 
         self.user_proxy.set_queues(self.client_sent_queue, self.client_receive_queue)
 
     async def start(self, message):
+        print('>>>>>>>>>>>start')
         await self.user_proxy.a_initiate_chat(
             self.assistant,
             clear_history=True,

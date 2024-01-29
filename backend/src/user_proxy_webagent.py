@@ -23,6 +23,7 @@ class UserProxyWebAgent(autogen.UserProxyAgent):
         config: Optional[Any] = None,
     ) -> Tuple[bool, Union[str, Dict, None]]:
         """Check if the conversation should be terminated, and if human reply is provided."""
+        print('check------>', messages)
         if config is None:
             config = self
         if messages is None:
@@ -31,10 +32,12 @@ class UserProxyWebAgent(autogen.UserProxyAgent):
         reply = ""
         no_human_input_msg = ""
         if self.human_input_mode == "ALWAYS":
+            print('ALWAYS ===== here')
             reply = await self.a_get_human_input(
                 f"Provide feedback to {sender.name}. Press enter to skip and use auto-reply, or type 'exit' to end the conversation: "
             )
             no_human_input_msg = "NO HUMAN INPUT RECEIVED." if not reply else ""
+            print('>>>>>>>> 1', message,' | ', replay )
             # if the human input is empty, and the message is a termination message, then we will terminate the conversation
             reply = reply if reply or not self._is_termination_msg(message) else "exit"
         else:
@@ -93,6 +96,8 @@ class UserProxyWebAgent(autogen.UserProxyAgent):
 
     async def a_get_human_input(self, prompt: str) -> str:
         last_message = self.last_message()
+        print('get_human_input', last_message["content"])
+
         if last_message["content"]:
             await self.client_receive_queue.put(last_message["content"])
             reply = await self.client_sent_queue.get()
@@ -102,4 +107,13 @@ class UserProxyWebAgent(autogen.UserProxyAgent):
         else:
             return 
 
+    async def a_no_human_input(self) -> str:
+        last_message = self.last_message()
+        if last_message["content"]:
+            await self.client_receive_queue.put(last_message["content"])
+            if reply and reply == "DO_FINISH":
+                return "exit"
+            return 
+        else:
+            return 
 

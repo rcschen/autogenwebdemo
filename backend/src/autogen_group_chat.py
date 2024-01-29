@@ -2,19 +2,16 @@ import autogen
 from user_proxy_webagent import UserProxyWebAgent
 from groupchatweb import GroupChatManagerWeb
 import asyncio
+from config_list import config_list
 
-config_list = [
-    {
-        "model": "gpt-3.5-turbo",
-    }
-]
+
 llm_config_assistant = {
-    "model":"gpt-3.5-turbo",
+    "model":"gpt-4",
     "temperature": 0,
     "config_list": config_list,
 }
 llm_config_proxy = {
-    "model":"gpt-3.5-turbo-0613",
+    "model":"gpt-4",
     "temperature": 0,
     "config_list": config_list,
 }
